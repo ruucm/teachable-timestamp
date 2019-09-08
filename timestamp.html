@@ -1,0 +1,269 @@
+<div>
+  <div id="root"></div>
+  <!-- <script src="https://unpkg.com/react/umd/react.development.js"></script> -->
+  <!-- <script src="https://unpkg.com/react-dom/umd/react-dom.development.js"></script> -->
+  <script src="https://unpkg.com/react/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/styled-components/dist/styled-components.min.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.21.1/babel.min.js"></script>
+
+  <script src="//fast.wistia.com/assets/external/E-v1.js" async></script>
+
+  <script type="text/babel">
+    class EmbeddedGist extends React.Component {
+      constructor(props) {
+        super(props)
+        this.gist = props.gist
+        this.file = props.file
+        this.stylesheetAdded = false
+        this.state = {
+          loading: true,
+          src: '',
+        }
+      }
+      // The Gist JSON data includes a stylesheet to add to the page
+      // to make it look correct. `addStylesheet` ensures we only add
+      // the stylesheet one time.
+      addStylesheet = href => {
+        if (!this.stylesheetAdded) {
+          this.stylesheetAdded = true
+          var link = document.createElement('link')
+          link.type = 'text/css'
+          link.rel = 'stylesheet'
+          link.href = href
+          document.head.appendChild(link)
+        }
+      }
+      componentDidMount() {
+        // Create a JSONP callback that will set our state
+        // with the data that comes back from the Gist site
+        var gistCallback = EmbeddedGist.nextGistCallback()
+        window[gistCallback] = function(gist) {
+          this.setState({
+            loading: false,
+            src: gist.div,
+          })
+          this.addStylesheet(gist.stylesheet)
+        }.bind(this)
+        var url =
+          'https://gist.github.com/' +
+          this.props.gist +
+          '.json?callback=' +
+          gistCallback
+        if (this.props.file) {
+          url += '&file=' + this.props.file
+        }
+        // Add the JSONP script tag to the document.
+        var script = document.createElement('script')
+        script.type = 'text/javascript'
+        script.src = url
+        document.head.appendChild(script)
+      }
+      render() {
+        if (this.state.loading) {
+          return <div>loading...</div>
+        } else {
+          return <div dangerouslySetInnerHTML={{ __html: this.state.src }} />
+        }
+      }
+    }
+    EmbeddedGist.propTypes = {
+      // gist: React.PropTypes.string.isRequired, // e.g. "username/id"
+      // file: React.PropTypes.string, // to embed a single specific file from the gist
+    }
+    // Each time we request a Gist, we'll need to generate a new
+    // global function name to serve as the JSONP callback.
+    var gistCallbackId = 0
+    EmbeddedGist.nextGistCallback = () => {
+      return 'embed_gist_callback_' + gistCallbackId++
+    }
+
+    // Styles
+    const Wrap = window.styled.div`
+      width: 350px;
+      height: 80px;
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      overflow: scroll;
+
+      background: white;
+      border-top-right-radius: 16px;
+      box-shadow: rgba(0, 0, 0, 0.2) 0px 15px 20px 2px;
+      padding: 10px 20px;
+      transition: 0.3s all ease-in-out;
+
+      ${props =>
+        props.visible &&
+        window.styled.css`
+          height: 70vh;
+          width: 50vw;
+        `}
+    `
+
+    const Li = window.styled.li`
+      font-size: 25px;
+      > span {
+        vertical-align: middle;
+      }
+      ${props =>
+        props.order &&
+        window.styled.css`
+          margin-left: ${30 * props.order}px;
+        `}
+      ${props =>
+        props.time &&
+        window.styled.css`
+          cursor: pointer;
+          color: #2442A7;
+        `}
+    `
+    const CodeButton = window.styled.button`
+        margin-left: 15px;
+        height: 29px;
+        padding-top: 0;
+        padding-bottom: 0;
+        border-radius: 8px;
+        background: white;
+        border: 1px solid #2442A7;
+        line-height: 27px;
+        vertical-align: middle;
+        outline: none;
+    `
+    const CloseButtonWrap = window.styled.div`
+        background: blue;
+    `
+    const CloseButton = window.styled.div`
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      cursor: pointer;
+      font-size: 20px;
+    `
+    const LI = ({ order, time, video, gist, children, ...props }) => {
+      const [showGist, setShowGist] = React.useState(false)
+      return (
+        <Li order={order} time={time}>
+          <span
+            onClick={() => {
+              video.time(time[0] * 60 + time[1])
+              video.play()
+            }}
+          >
+            {children} {time ? '(' + time[0] + ':' + time[1] + ')' : ''}
+          </span>
+
+          {gist ? (
+            <CodeButton
+              onClick={() => {
+                setShowGist(!showGist)
+              }}
+            >
+              {!showGist ? 'code' : 'close'}
+            </CodeButton>
+          ) : (
+            ''
+          )}
+          <div>{gist && showGist ? <EmbeddedGist gist={gist} /> : ''}</div>
+        </Li>
+      )
+    }
+
+    const videoId = 'siubmo4kg3'
+
+    function TimeStamps() {
+      const [videos, setVideos] = React.useState([])
+      const [visible, setVisible] = React.useState(true)
+
+      React.useEffect(() => {
+        console.log('window', window)
+        if (videos.length == 0) {
+          console.log('start fetching video infos')
+          window._wq = window._wq || []
+          _wq.push({
+            id: videoId,
+            onReady: video => {
+              setVideos([video])
+              console.log('success')
+              // _wq.push({
+              //   id: 'e27rz8fx6w',
+              //   onReady: video2 => {
+              //     setVideos([video, video2])
+              //   },
+              // })
+            },
+          })
+        }
+      })
+
+      return (
+        <Wrap visible={visible}>
+          <CloseButton
+            onClick={() => {
+              setVisible(!visible)
+            }}
+          >
+            {visible ? '🔴' : '🔵'}
+          </CloseButton>
+          <h1>TimeStamps</h1>
+          <div>
+            <LI order={0}>A. Card Animation</LI>
+
+            <LI order={1}>1. Card (Override)</LI>
+
+            <LI
+              order={2}
+              video={videos[0]}
+              time={[0, 37]}
+              gist={'ruucm-working/56704089b9154affe068c6e3634666ce'}
+            >
+              drag properties
+            </LI>
+
+            <LI
+              order={2}
+              video={videos[0]}
+              time={[2, 16]}
+              gist={'ruucm-working/1fccdf77d799b6dc07f4ccfeb7659648'}
+            >
+              onDragEnd
+            </LI>
+
+            <LI
+              order={2}
+              video={videos[0]}
+              time={[4, 25]}
+              gist={'ruucm-working/c3fac75241179f1a138645b589bd44aa'}
+            >
+              useMotionValue (for stopping drag)
+            </LI>
+
+            <LI order={0}>B. Button Animation</LI>
+
+            <LI order={1}>1. LikeButton / NopeButton (Override)</LI>
+
+            <LI
+              order={2}
+              video={videos[0]}
+              time={[5, 40]}
+              gist={'ruucm-working/73e05683475f8e1dc49063977d250c15'}
+            >
+              onDrag + animate (useAnimation)
+            </LI>
+
+            <LI
+              order={1}
+              video={videos[0]}
+              time={[8, 47]}
+              gist={'ruucm-working/1eb83b3784b03328b0e29f1beb29237a'}
+            >
+              2. Multiplecards
+            </LI>
+          </div>
+        </Wrap>
+      )
+    }
+    ReactDOM.render(<TimeStamps />, document.getElementById('root'))
+  </script>
+</div>
